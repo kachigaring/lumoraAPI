@@ -30,7 +30,7 @@ export async function refreshJobs({ log = console.log } = {}) {
   const jobs = read('jobs.json');
 
   if (!isLive()) {
-    log('[jobs] No Adzuna keys set — SAMPLE mode, no live fetch.');
+    log('[jobs] No Adzuna keys set - SAMPLE mode, no live fetch.');
     return { mode: 'sample', added: 0, total: jobs.length };
   }
 
@@ -88,6 +88,6 @@ export async function refreshJobs({ log = console.log } = {}) {
 
   jobs.sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')));
   write('jobs.json', jobs);
-  log(`[jobs] Live refresh done — ${added} new, ${jobs.length} total.`);
+  log(`[jobs] Live refresh done - ${added} new, ${jobs.length} total.`);
   return { mode: 'live', added, total: jobs.length };
 }
