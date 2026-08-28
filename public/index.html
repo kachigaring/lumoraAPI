@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumora — Job Leads</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Lumora <span>Job Leads</span></h1>
+    <nav>
+      <a href="/" class="active">Leads</a>
+      <a href="/candidates.html">CV database</a>
+      <a href="/apply.html" target="_blank">Application form &#8599;</a>
+    </nav>
+  </header>
+
+  <div id="mode" class="badge">Loading&hellip;</div>
+
+  <div class="toolbar">
+    <select id="sector"></select>
+    <select id="status">
+      <option value="all">Any status</option>
+      <option>New</option>
+      <option>Calling today</option>
+      <option>Called</option>
+      <option>Left message</option>
+      <option>Emailed</option>
+      <option>Not relevant</option>
+      <option>Client won</option>
+    </select>
+    <input id="q" placeholder="Search title / company / town">
+    <button id="refresh">Check for new jobs</button>
+    <span id="count" class="count"></span>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Posted</th><th>Job</th><th>Company</th><th>Location</th><th>Salary</th>
+          <th>Sector</th><th>Status</th><th>HR contact</th><th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

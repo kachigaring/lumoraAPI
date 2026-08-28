@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CV database — Lumora</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Lumora <span>CV database</span></h1>
+    <nav>
+      <a href="/">Leads</a>
+      <a href="/candidates.html" class="active">CV database</a>
+      <a href="/apply.html" target="_blank">Application form &#8599;</a>
+    </nav>
+  </header>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Received</th><th>Name</th><th>Email</th><th>Phone</th><th>Area</th><th>Message</th><th>CV</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const esc = (s) =>
+      String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    fetch('/api/candidates')
+      .then((r) => r.json())
+      .then((list) => {
+        const tb = document.getElementById('rows');
+        if (!list.length) {
+          tb.innerHTML = '<tr><td colspan="7">No applications yet. Share the application form link to start collecting CVs.</td></tr>';
+          return;
+        }
+        for (const c of list) {
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            `<td>${new Date(c.received).toLocaleString('en-GB')}</td>` +
+            `<td>${esc(c.name)}</td>` +
+            `<td>${esc(c.email)}</td>` +
+            `<td>${esc(c.phone)}</td>` +
+            `<td>${esc(c.sector)}</td>` +
+            `<td>${esc(c.message)}</td>` +
+            `<td>${c.cvFile ? `<a href="/cv/${encodeURIComponent(c.cvFile)}" target="_blank">${esc(c.cvOriginalName || 'download')}</a>` : '&mdash;'}</td>`;
+          tb.appendChild(tr);
+        }
+      });
+  </script>
+</body>
+</html>

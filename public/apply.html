@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register your CV — Lumora</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="narrow">
+  <header><h1>Lumora <span>Register your CV</span></h1></header>
+  <p>Send us your details and CV and we&rsquo;ll be in touch about roles that match.</p>
+
+  <form id="f" enctype="multipart/form-data">
+    <label>Full name *
+      <input name="name" required>
+    </label>
+    <label>Email *
+      <input name="email" type="email" required>
+    </label>
+    <label>Phone
+      <input name="phone">
+    </label>
+    <label>Area of work
+      <select name="sector">
+        <option value="nursery">Nursery / Early Years</option>
+        <option value="biomed">Biomedical Science</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label>Message
+      <textarea name="message" rows="4"></textarea>
+    </label>
+    <label>CV (PDF or Word, max 5 MB)
+      <input name="cv" type="file" accept=".pdf,.doc,.docx">
+    </label>
+    <button type="submit">Submit</button>
+    <p id="msg"></p>
+  </form>
+
+  <script>
+    const f = document.getElementById('f');
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = f.querySelector('button');
+      btn.disabled = true;
+      const res = await fetch('/api/apply', { method: 'POST', body: new FormData(f) });
+      const out = document.getElementById('msg');
+      if (res.ok) {
+        f.reset();
+        out.textContent = 'Thank you — your details have been received.';
+        out.className = 'ok';
+      } else {
+        const j = await res.json().catch(() => ({}));
+        out.textContent = j.error || 'Something went wrong. Please try again.';
+        out.className = 'err';
+      }
+      btn.disabled = false;
+    };
+  </script>
+</body>
+</html>
