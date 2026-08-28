@@ -15,9 +15,12 @@ leads — plus a place to collect candidate CVs.
 - **CV database** — a public application form (`/apply.html`) where candidates
   send their details and upload a CV. Everything received is listed on the
   **CV database** page with a download link.
+- **Login** — the board, the CV list and CV downloads sit behind a username +
+  password (`ADMIN_USER` / `ADMIN_PASSWORD`). Only the application form is open
+  to the public.
 
-It runs on your own computer. Nothing is shared publicly unless you host it
-somewhere later.
+It runs on your own computer until you host it. To put it online, see
+**[DEPLOY.md](DEPLOY.md)**.
 
 ## Quick start
 
@@ -46,7 +49,8 @@ A free Adzuna key takes about 5 minutes to get — SETUP.md step 4.
 | `src/jobs.js` | Talks to the Adzuna job API |
 | `public/` | The pages you see in the browser |
 | `data/` | Your leads, notes and CVs live here (kept off GitHub) |
-| `.env.example` | Copy to `.env` and add your Adzuna key |
+| `.env.example` | Copy to `.env` and add your login + Adzuna key |
+| `DEPLOY.md` | Step-by-step guide to hosting it online with Render |
 
 ## Roadmap
 
@@ -54,4 +58,4 @@ A free Adzuna key takes about 5 minutes to get — SETUP.md step 4.
 - [ ] Add biomed once nursery is working
 - [ ] Look up HR phone numbers automatically
 - [ ] Email/desktop alert when a new nursery job lands
-- [ ] Host the apply form online so candidates can reach it any time
+- [ ] Persistent storage for the hosted version (database + file storage)

@@ -14,14 +14,57 @@ import { SECTORS } from './src/sectors.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const POLL_MINUTES = Number(process.env.POLL_MINUTES || 15);
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+// Render (and most hosts) set this. Used only to refuse to run unprotected online.
+const IS_HOSTED = Boolean(process.env.RENDER || process.env.NODE_ENV === 'production');
 
 ensureData();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ---------- Login gate ----------
+// The public only needs the application form. Everything else (the leads board,
+// the CV list, CV downloads, the admin APIs) is behind a username + password
+// set with the ADMIN_USER / ADMIN_PASSWORD environment variables.
+//
+//  - password set                -> login required (local or hosted)
+//  - no password, running local  -> open, with a console warning (easy first run)
+//  - no password, running hosted -> admin pages refuse to load, so nothing leaks
+const PUBLIC_PATHS = new Set(['/apply.html', '/styles.css', '/favicon.ico']);
+
+function isPublicRequest(req) {
+  if (req.method === 'POST' && req.path === '/api/apply') return true;
+  if ((req.method === 'GET' || req.method === 'HEAD') && PUBLIC_PATHS.has(req.path)) return true;
+  return false;
+}
+
+app.use((req, res, next) => {
+  if (isPublicRequest(req)) return next();
+
+  if (!ADMIN_PASSWORD) {
+    if (IS_HOSTED) {
+      return res
+        .status(503)
+        .send('Set ADMIN_USER and ADMIN_PASSWORD in this service’s environment variables, then redeploy.');
+    }
+    return next(); // local, unprotected — warned about at startup
+  }
+
+  const [scheme, encoded] = (req.headers.authorization || '').split(' ');
+  if (scheme === 'Basic' && encoded) {
+    const [user, pass] = Buffer.from(encoded, 'base64').toString().split(':');
+    if (user === ADMIN_USER && pass === ADMIN_PASSWORD) return next();
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="Lumora"');
+  res.status(401).send('Login required.');
+});
+
 app.use(express.static(join(__dirname, 'public')));
-app.use('/cv', express.static(UPLOAD_DIR)); // download submitted CVs
+app.use('/cv', express.static(UPLOAD_DIR)); // download submitted CVs (login required)
 
 // ---------- CV upload handling ----------
 const ALLOWED = new Set(['.pdf', '.doc', '.docx']);
@@ -105,6 +148,12 @@ app.listen(PORT, async () => {
   } else {
     console.log('  Mode: SAMPLE (no Adzuna keys). Showing example data only.');
     console.log('  Add keys in a .env file to pull real jobs - see SETUP.md.\n');
+  }
+  if (ADMIN_PASSWORD) {
+    console.log(`  Login: admin pages require user "${ADMIN_USER}" + your password.\n`);
+  } else {
+    console.log('  Login: NONE set. The leads board and CV list are unprotected.');
+    console.log('  Fine on your own PC; set ADMIN_PASSWORD before hosting - see DEPLOY.md.\n');
   }
   await refreshJobs();
   if (isLive()) setInterval(() => refreshJobs(), POLL_MINUTES * 60 * 1000);
