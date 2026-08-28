@@ -5,13 +5,14 @@ About 15 minutes.
 
 ---
 
-## Step 1 — Install Node.js
+## Step 1 — Install Node.js (the clean way)
 
-Node.js is the free engine this tool runs on.
+Node.js is the free engine this tool runs on. **Use the installer, not the ZIP** —
+the ZIP version causes permission problems on Windows.
 
 1. Go to <https://nodejs.org>
-2. Click the button labelled **"LTS"**.
-3. Open the downloaded file and click **Next → Next → Install** (defaults are fine).
+2. Click the button labelled **"LTS"** — it downloads a file ending in **`.msi`**.
+3. Open it and click **Next → Next → Install** (all defaults are fine).
 4. Restart the computer if it asks.
 
 **Check it worked:** press the Windows key, type `cmd`, open **Command Prompt**,
@@ -22,13 +23,17 @@ If you get "not recognized", Node isn't installed yet — redo this step and res
 
 ## Step 2 — The Lumora folder
 
-It's already on this PC at:
+Use this folder — it's already set up and tested:
 
 ```
-C:\Users\Dell XPS\Documents\lumoraAPI
+C:\Users\Dell XPS\lumoraAPI
 ```
 
-If you ever re-download it from GitHub as a ZIP: right-click the ZIP →
+> There is an older copy at `C:\Users\Dell XPS\Documents\lumoraAPI` that has some
+> stuck files in it. Ignore it. You can delete that whole folder later (Windows
+> will ask you to click **Continue** as administrator). Don't use it.
+
+If you ever re-download the project from GitHub as a ZIP: right-click the ZIP →
 **Extract All** → use the folder that appears inside.
 
 ---
