@@ -1,0 +1,76 @@
+# Lumora lead engine - all tunable settings live here.
+# Change values, save, run again. No need to touch the code.
+
+sectors:
+  - nursery          # biomedical science comes later
+
+postcodes:
+  api_base: https://api.postcodes.io
+  request_timeout_seconds: 20
+
+# ---- Phase 1: client leads ----
+
+providers:
+  # Ofsted provider-level data file (CSV). The loader will use this path.
+  source_file: data/ofsted_providers.csv
+  min_places: 20                 # a 6-place childminder will not pay an agency fee
+  exclude_provider_types:
+    - Childminder
+
+vacancies:
+  adzuna_country: gb
+  max_days_old: 7
+  results_per_page: 50
+  nursery_keywords:
+    - nursery practitioner
+    - nursery nurse
+    - early years practitioner
+    - room leader nursery
+    - nursery manager
+    - level 3 early years
+
+matching:
+  fuzzy_threshold: 88            # rapidfuzz score out of 100
+  strip_words:                   # removed before comparing employer names
+    - ltd
+    - limited
+    - day nursery
+    - nursery
+    - pre-school
+    - preschool
+    - childcare
+    - nurseries
+    - the
+    - and
+
+# Competitor agencies - their postings are still a signal but tagged separately
+agency_blocklist:
+  - reed
+  - indeed
+  - hays
+  - randstad
+  - tradewind
+  - protocol
+  - teaching personnel
+  - remedy
+  - supply desk
+  - aspire people
+
+scoring:
+  weights:
+    live_vacancy_7d: 40
+    multiple_vacancies: 15       # 2 or more
+    senior_role: 10
+    large_setting: 15
+    not_contacted_60d: 10
+    stale_inspection: 5          # last Ofsted inspection > 4 years ago
+  large_setting_places: 40
+  senior_role_keywords:
+    - level 3
+    - room leader
+    - deputy
+    - manager
+  top_n: 50
+
+output:
+  dir: output

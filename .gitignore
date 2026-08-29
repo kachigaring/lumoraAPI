@@ -18,3 +18,13 @@ build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Lumora engine (Python) — local data never goes to GitHub
+engine/data/
+engine/output/
+engine/logs/
+engine/.env
+__pycache__/
+*.pyc
+.venv/
+venv/
