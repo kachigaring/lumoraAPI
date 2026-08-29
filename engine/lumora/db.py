@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS vacancies (
     employer_norm   TEXT,
     location_text   TEXT,
     admin_district  TEXT,
+    town            TEXT,
+    area_json       TEXT,
+    latitude        REAL,
+    longitude       REAL,
     salary_min      REAL,
     salary_max      REAL,
     created_date    TEXT,
@@ -98,11 +102,25 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns that were introduced after a table was first created."""
+    existing = {r[1] for r in conn.execute("PRAGMA table_info(vacancies)")}
+    for col, decl in (
+        ("town", "TEXT"),
+        ("area_json", "TEXT"),
+        ("latitude", "REAL"),
+        ("longitude", "REAL"),
+    ):
+        if col not in existing:
+            conn.execute(f"ALTER TABLE vacancies ADD COLUMN {col} {decl}")
+
+
 def init_schema(conn: sqlite3.Connection | None = None) -> None:
     own = conn is None
     conn = conn or connect()
     try:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.commit()
     finally:
         if own:

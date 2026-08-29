@@ -6,7 +6,7 @@ Run:   python client_leads.py
 
 Produces, in output/:
    client_leads_YYYY-MM-DD.csv          <- open this and start calling
-   unmatched_vacancies_YYYY-MM-DD.csv   <- vacancies we could not tie to a nursery
+   review_vacancies_YYYY-MM-DD.csv      <- agency / job-board posts, for reference
 """
 from __future__ import annotations
 
@@ -19,10 +19,9 @@ import yaml
 
 from lumora.db import connect, init_schema
 from lumora.exclusions import load_exclusions
+from lumora.leads import build_client_leads
 from lumora.log import get_logger
-from lumora.matching import match_vacancies
 from lumora.providers import load_providers
-from lumora.scoring import score_providers
 from lumora.vacancies import fetch_vacancies, have_keys
 
 log = get_logger()
@@ -39,18 +38,15 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     with connect() as conn:
-        # 1. nursery base table
         have_providers = conn.execute("SELECT COUNT(*) FROM providers").fetchone()[0]
         if reload_providers or not have_providers:
             load_providers(cfg, conn)
         else:
-            log.info(f"Using existing providers table ({have_providers:,} nurseries). "
-                     f"Add --reload-providers after downloading a new Ofsted file.")
+            log.info(f"Using existing Ofsted data ({have_providers:,} nurseries). "
+                     f"Run with --reload-providers after downloading a newer file.")
 
-        # 2. owner's own lists
         load_exclusions(conn)
 
-        # 3. live vacancies
         if not have_keys():
             log.error(
                 "Cannot build the list without live vacancies.\n"
@@ -59,47 +55,40 @@ def main() -> int:
             return 2
         fetch_vacancies(cfg, conn)
 
-        # 4. join vacancies to nurseries
-        match_vacancies(cfg, conn)
+        leads = build_client_leads(cfg, conn)
 
-        # 5. score and rank
-        leads = score_providers(cfg, conn)
-
-        # ---- write the call list ----
+        # ---- the call list ----
         leads_path = out_dir / f"client_leads_{today}.csv"
         with leads_path.open("w", newline="", encoding="utf-8-sig") as f:
             wr = csv.writer(f)
             wr.writerow([
-                "rank", "score", "nursery", "postcode", "local_authority", "phone",
-                "live_vacancies", "vacancy_titles", "newest_vacancy",
-                "inspection_outcome", "places", "example_advert",
+                "rank", "score", "employer", "town", "live_vacancies", "vacancy_titles",
+                "newest_advert", "salary_hint", "ofsted_match", "ofsted_setting",
+                "postcode", "places", "rating", "example_advert",
             ])
             for i, g in enumerate(leads, 1):
                 wr.writerow([
-                    i, g["score"], g["provider_name"], g["postcode"], g["local_authority"],
-                    g["phone"], g["vacancy_count"], g["vacancy_titles"], g["newest_vacancy"],
-                    g["inspection_outcome"], g["places"], g["example_url"],
+                    i, g["score"], g["employer"], g["town"], g["vacancy_count"],
+                    g["vacancy_titles"], g["newest_vacancy"], g["salary_hint"],
+                    g["ofsted_match"], g["ofsted_name"], g["postcode"], g["places"],
+                    g["rating"], g["example_advert"],
                 ])
 
-        # ---- write the review file ----
-        unmatched_path = out_dir / f"unmatched_vacancies_{today}.csv"
+        # ---- reference: what was filtered out as agency / job board ----
+        review_path = out_dir / f"review_vacancies_{today}.csv"
         rows = conn.execute(
-            """SELECT v.employer_name, v.title, v.location_text, v.created_date,
-                      v.redirect_url, u.reason
-               FROM unmatched_vacancies u JOIN vacancies v ON v.id = u.vacancy_id
-               WHERE v.is_agency = 0
-               ORDER BY v.created_date DESC"""
+            "SELECT employer_name, title, location_text, created_date, redirect_url "
+            "FROM vacancies WHERE is_agency = 1 ORDER BY created_date DESC"
         ).fetchall()
-        with unmatched_path.open("w", newline="", encoding="utf-8-sig") as f:
+        with review_path.open("w", newline="", encoding="utf-8-sig") as f:
             wr = csv.writer(f)
-            wr.writerow(["employer", "title", "location", "posted", "advert", "reason"])
+            wr.writerow(["employer", "title", "location", "posted", "advert"])
             for r in rows:
                 wr.writerow(list(r))
 
     log.info("")
-    log.info(f"DONE.  Call list:  {leads_path}")
-    log.info(f"       To review:  {unmatched_path}  ({len(rows)} rows)")
-    log.info(f"       {len(leads)} nurseries on the call list.")
+    log.info(f"DONE.  Call list:      {leads_path}")
+    log.info(f"       {len(leads)} leads.  Agency/board posts set aside: {len(rows)} (see {review_path.name}).")
     return 0
 
 

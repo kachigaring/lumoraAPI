@@ -21,6 +21,7 @@ vacancies:
   adzuna_country: gb
   max_days_old: 7
   results_per_page: 50
+  england_only: true          # Ofsted / this market is England; drop Scotland, Wales, NI
   nursery_keywords:
     - nursery practitioner
     - nursery nurse
@@ -43,18 +44,103 @@ matching:
     - the
     - and
 
-# Competitor agencies - their postings are still a signal but tagged separately
+# Competitor agencies / job boards / training providers.
+# Their postings are NOT nursery leads - they are kept but tagged is_agency=1
+# and left off the call list.
 agency_blocklist:
   - reed
   - indeed
+  - totaljobs
+  - cv-library
   - hays
   - randstad
   - tradewind
-  - protocol
+  - protocol education
   - teaching personnel
+  - teacheractive
+  - simply education
+  - academics
+  - academics ltd
   - remedy
+  - remedicare
+  - willingcare
+  - willing recruitment
   - supply desk
   - aspire people
+  - staff match
+  - staffmatch
+  - veritas education
+  - prospero
+  - gsl education
+  - engage education
+  - vision for education
+  - smart teachers
+  - nurse seekers
+  - additional resources
+  - hire ground
+  - flourish education
+  - milk education
+  - long term teachers
+  - qualiteach
+  - twenty4seven
+  - empowering learning
+  - clarus education
+  - zen educate
+  - horizon teachers
+  - career teachers
+  - tradewind recruitment
+  - blue arrow
+  - hcl
+  - permanent futures
+  - winner education
+  - connaught
+  - adtalent
+  - portman recruitment
+  - supreme recruitment
+  - pure care recruitment
+  - flow recruitment
+  - aob recruitment
+  - pertemps
+  - gi group
+  - berry recruitment
+  - search consultancy
+  - hays education
+  - nurseresourcing
+  - servoca
+  - dunbar education
+  - principal resourcing
+  - class people
+  - nurse plus
+  - completely care
+  - total training provision
+  - transparency education
+  - magisters
+  - marylebone services
+  - protocol
+  - capita
+
+# If the employer name contains any of these words, treat it as an agency /
+# training provider rather than a nursery (case-insensitive substring).
+agency_name_contains:
+  - recruit
+  - staffing
+  - " staff"
+  - personnel
+  - "education ltd"
+  - "education limited"
+  - "training ltd"
+  - "training limited"
+  - "training services"
+  - "training provider"
+  - apprenticeships
+  - "learning ltd"
+  - wmc training
+  - inspiro
+  - "consultancy"
+  - "resourcing"
+  - "council"
+  - "university of"
+  - "county council"
 
 scoring:
   weights:
@@ -70,7 +156,12 @@ scoring:
     - room leader
     - deputy
     - manager
-  top_n: 50
+    - senco
+  top_n: 120
+
+# How confident the name match must be to attach Ofsted details to a lead (0-100)
+ofsted_enrich:
+  name_score_min: 88
 
 output:
   dir: output

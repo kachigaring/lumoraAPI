@@ -10,7 +10,7 @@ Python 3.11+ · SQLite · CSV output · driven by `config.yaml` · secrets in `.
 | Phase | What | Status |
 |---|---|---|
 | **0** | Postcode layer — distance between any two UK postcodes, cached | ✅ done, `check_phase0.py` passes |
-| **1** | Nursery client leads CSV — Ofsted providers + Adzuna vacancies + scoring | ✅ built, needs Adzuna keys to run live |
+| **1** | Nursery client leads CSV — live vacancies (Adzuna) grouped by employer+town, scored, Ofsted details attached where they match | ✅ running |
 | 2+ | Biomed lab leads, candidate supply, matching, compliance | later (see the spec) |
 
 ## Running it

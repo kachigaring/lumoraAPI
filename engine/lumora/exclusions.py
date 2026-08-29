@@ -14,15 +14,12 @@ from pathlib import Path
 import pandas as pd
 
 from .db import connect
+from .leads import light_norm
 from .log import get_logger
-from .matching import normalise_name
 from .postcodes import normalise as norm_postcode
 
 log = get_logger()
 ENGINE_DIR = Path(__file__).resolve().parent.parent
-
-STRIP = ["ltd", "limited", "day nursery", "nursery", "pre-school", "preschool",
-         "childcare", "nurseries", "the", "and"]
 
 
 def _read(path: Path) -> pd.DataFrame | None:
@@ -51,7 +48,7 @@ def load_exclusions(conn=None) -> dict:
                 name = r.get("name", "").strip()
                 if not name:
                     continue
-                nn = normalise_name(name, STRIP)
+                nn = light_norm(name)
                 pc = norm_postcode(r.get("postcode", ""))
                 conn.execute(
                     f"""INSERT INTO exclusions (name_norm, raw_name, postcode_norm, {col})
