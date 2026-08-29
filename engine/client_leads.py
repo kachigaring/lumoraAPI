@@ -19,6 +19,7 @@ import yaml
 
 from lumora.db import connect, init_schema
 from lumora.exclusions import load_exclusions
+from lumora.fresh_roles import build_fresh_roles
 from lumora.leads import build_client_leads
 from lumora.log import get_logger
 from lumora.providers import load_providers
@@ -55,10 +56,25 @@ def main() -> int:
             return 2
         fetch_vacancies(cfg, conn)
 
+        fresh = build_fresh_roles(cfg, conn)
         leads = build_client_leads(cfg, conn)
 
-        # ---- the call list ----
-        leads_path = out_dir / f"client_leads_{today}.csv"
+        # ---- 1. FRESH ROLES - the main working list, one row per advert ----
+        fresh_path = out_dir / f"fresh_roles_{today}.csv"
+        with fresh_path.open("w", newline="", encoding="utf-8-sig") as f:
+            wr = csv.writer(f)
+            wr.writerow([
+                "posted", "days_old", "job_title", "employer", "town", "area",
+                "salary", "advert_link", "find_phone",
+            ])
+            for r in fresh:
+                wr.writerow([
+                    r["posted"], r["days_old"], r["job_title"], r["employer"], r["town"],
+                    r["area"], r["salary"], r["advert_link"], r["find_phone"],
+                ])
+
+        # ---- 2. BY EMPLOYER - a call sheet grouped by nursery group ----
+        leads_path = out_dir / f"by_employer_{today}.csv"
         with leads_path.open("w", newline="", encoding="utf-8-sig") as f:
             wr = csv.writer(f)
             wr.writerow([
@@ -74,8 +90,8 @@ def main() -> int:
                     g["rating"], g["example_advert"],
                 ])
 
-        # ---- reference: what was filtered out as agency / job board ----
-        review_path = out_dir / f"review_vacancies_{today}.csv"
+        # ---- 3. reference: what was filtered out as agency / job board ----
+        review_path = out_dir / f"agency_posts_{today}.csv"
         rows = conn.execute(
             "SELECT employer_name, title, location_text, created_date, redirect_url "
             "FROM vacancies WHERE is_agency = 1 ORDER BY created_date DESC"
@@ -87,8 +103,11 @@ def main() -> int:
                 wr.writerow(list(r))
 
     log.info("")
-    log.info(f"DONE.  Call list:      {leads_path}")
-    log.info(f"       {len(leads)} leads.  Agency/board posts set aside: {len(rows)} (see {review_path.name}).")
+    log.info(f"DONE.")
+    log.info(f"  1. WORK FROM THIS:  {fresh_path.name}   ({len(fresh)} fresh roles, newest first)")
+    log.info(f"  2. Call sheet:      {leads_path.name}   ({len(leads)} nursery groups)")
+    log.info(f"  3. Ignored (agencies): {review_path.name}   ({len(rows)} posts)")
+    log.info(f"  Files are in: {out_dir}")
     return 0
 
 

@@ -19,7 +19,8 @@ providers:
 
 vacancies:
   adzuna_country: gb
-  max_days_old: 7
+  max_days_old: 7             # how far back to pull from Adzuna
+  fresh_roles_max_days: 4     # "just went up" cut-off for the fresh_roles list
   results_per_page: 50
   england_only: true          # Ofsted / this market is England; drop Scotland, Wales, NI
   nursery_keywords:
