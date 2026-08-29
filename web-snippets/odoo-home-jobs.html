@@ -1,0 +1,129 @@
+<!--
+  Lumora - live jobs for the Odoo home page.
+
+  This replaces the <script> block at the very bottom of your custom home-page
+  HTML. It keeps the rotating headline and the search filter, and it fills the
+  job list + sector counts from the live feed:
+
+      https://lumoraapi-1te5.onrender.com/jobs.json
+
+  You can also delete the six hard-coded <article class="lapi-job">...</article>
+  blocks - this script clears whatever is there and rebuilds the list.
+
+  Nothing else in your HTML/CSS needs to change.
+-->
+<script>
+(function () {
+  var FEED = 'https://lumoraapi-1te5.onrender.com/jobs.json';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- rotating word in the headline ---- */
+  var rot = document.getElementById('lapiRotate');
+  if (rot && !reduce) {
+    var words = ['early years', 'life sciences', 'healthcare', 'education', 'laboratory work'];
+    var wi = 0;
+    rot.style.transition = 'opacity .22s ease';
+    setInterval(function () {
+      wi = (wi + 1) % words.length;
+      rot.style.opacity = '0';
+      setTimeout(function () { rot.textContent = words[wi]; rot.style.opacity = '1'; }, 220);
+    }, 2600);
+  }
+
+  var listEl = document.getElementById('lapiJobs');
+  var emptyEl = document.getElementById('lapiEmpty');
+  var qEl = document.getElementById('lapiQ');
+  var locEl = document.getElementById('lapiLoc');
+  if (!listEl) return;
+
+  var SECTOR_LABEL = { nursery: 'Early years', biomed: 'Life sciences' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function daysAgo(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var n = Math.floor((Date.now() - d) / 86400000);
+    return n <= 0 ? 'today' : n === 1 ? 'yesterday' : n + ' days ago';
+  }
+
+  function card(j) {
+    var art = document.createElement('article');
+    art.className = 'lapi-job';
+    var when = daysAgo(j.posted);
+    var meta = [j.location, j.salary, when].filter(Boolean)
+      .map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('');
+    var tags = '<span class="lapi-tag">' + esc(SECTOR_LABEL[j.sector] || 'Specialist') + '</span>';
+    if (/level\s*3/i.test(j.title)) tags += '<span class="lapi-tag">Level 3</span>';
+    if (/manager|leader|deputy|senco/i.test(j.title)) tags += '<span class="lapi-tag">Leadership</span>';
+    art.innerHTML =
+      '<div>' +
+        '<h3><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.title) + '</a></h3>' +
+        '<p class="lapi-job-meta">' + (meta || '<span>See advert for details</span>') + '</p>' +
+        '<div class="lapi-tags">' + tags + '</div>' +
+      '</div>' +
+      '<a class="lapi-btn lapi-btn-soft" href="' + esc(j.url) + '" target="_blank" rel="noopener">View role</a>';
+    return art;
+  }
+
+  var all = [];
+
+  function render(jobs) {
+    listEl.innerHTML = '';
+    jobs.forEach(function (j) { listEl.appendChild(card(j)); });
+    filter();
+  }
+
+  function setCounts(jobs) {
+    var byS = {};
+    jobs.forEach(function (j) { byS[j.sector] = (byS[j.sector] || 0) + 1; });
+    document.querySelectorAll('.lapi-sector').forEach(function (tile) {
+      var h = (tile.querySelector('h3') || {}).textContent || '';
+      var badge = tile.querySelector('.lapi-count');
+      if (!badge) return;
+      var n = /early years|childcare/i.test(h) ? (byS.nursery || 0)
+            : /life science|laborator|scientific|technical/i.test(h) ? (byS.biomed || 0)
+            : null;
+      if (n !== null) badge.textContent = n + (n === 1 ? ' live role' : ' live roles');
+    });
+  }
+
+  function filter() {
+    if (!qEl || !locEl) return;
+    var a = qEl.value.trim().toLowerCase();
+    var b = locEl.value.trim().toLowerCase();
+    var shown = 0;
+    listEl.querySelectorAll('.lapi-job').forEach(function (job) {
+      var t = job.textContent.toLowerCase();
+      var hit = (!a || t.indexOf(a) > -1) && (!b || t.indexOf(b) > -1);
+      job.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    if (emptyEl) emptyEl.style.display = shown ? 'none' : 'block';
+  }
+
+  if (qEl) qEl.addEventListener('input', filter);
+  if (locEl) locEl.addEventListener('input', filter);
+
+  listEl.innerHTML = '<p class="lapi-job-meta" style="padding:8px 4px">Loading live roles…</p>';
+
+  fetch(FEED)
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      all = (data && data.jobs) || [];
+      if (!all.length) {
+        listEl.innerHTML = '<p class="lapi-job-meta" style="padding:8px 4px">No live roles right now - check back shortly.</p>';
+        return;
+      }
+      render(all);
+      setCounts(all);
+    })
+    .catch(function () {
+      listEl.innerHTML = '<p class="lapi-job-meta" style="padding:8px 4px">Could not load roles just now. Please refresh the page.</p>';
+    });
+})();
+</script>
