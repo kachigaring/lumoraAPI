@@ -18,6 +18,7 @@ from pathlib import Path
 import yaml
 
 from lumora.db import connect, init_schema
+from lumora.emailer import send_report
 from lumora.exclusions import load_exclusions
 from lumora.fresh_roles import build_fresh_roles
 from lumora.leads import build_client_leads
@@ -108,6 +109,17 @@ def main() -> int:
     log.info(f"  2. Call sheet:      {leads_path.name}   ({len(leads)} nursery groups)")
     log.info(f"  3. Ignored (agencies): {review_path.name}   ({len(rows)} posts)")
     log.info(f"  Files are in: {out_dir}")
+
+    body = (
+        f"Lumora lead engine - {today}\n\n"
+        f"  {len(fresh)} fresh nursery roles (last few days), newest first  -> fresh_roles CSV\n"
+        f"  {len(leads)} nursery groups hiring, scored                       -> by_employer CSV\n"
+        f"  {len(rows)} agency / job-board posts set aside                   -> agency_posts CSV\n\n"
+        f"Work from fresh_roles. The 'find_phone' column links to a Google search "
+        f"for each nursery's number. The 'advert_link' column opens the real job ad.\n"
+    )
+    send_report(f"Lumora leads {today} - {len(fresh)} fresh roles", body,
+                [fresh_path, leads_path, review_path])
     return 0
 
 

@@ -7,7 +7,32 @@ import { read, write } from './store.js';
 const APP_ID = process.env.ADZUNA_APP_ID;
 const APP_KEY = process.env.ADZUNA_APP_KEY;
 const COUNTRY = process.env.ADZUNA_COUNTRY || 'gb';
-const MAX_DAYS_OLD = Number(process.env.MAX_DAYS_OLD || 2);
+const MAX_DAYS_OLD = Number(process.env.MAX_DAYS_OLD || 7);
+
+// Competitor agencies / job boards / training providers - their adverts are not
+// shown on the public board.
+const AGENCY_TERMS = [
+  'recruit', 'staffing', ' staff ', 'personnel', 'resourcing', 'consultancy',
+  'associates', 'locum', 'agency',
+  'education ltd', 'education limited', 'training ltd', 'training limited',
+  'reed', 'indeed', 'totaljobs', 'cv-library', 'hays', 'randstad', 'tradewind',
+  'protocol education', 'teaching personnel', 'teacheractive', 'simply education',
+  'academics', 'remedy', 'remedicare', 'willingcare', 'aspire people', 'prospero',
+  'gsl education', 'engage education', 'vision for education', 'zen educate',
+  'nurse plus', 'nurse seekers', 'blue arrow', 'pertemps', 'gi group', 'servoca',
+  'twenty4seven', 'empowering learning', 'milk education', 'qualiteach',
+  'supply desk', 'career teachers', 'horizon teachers', 'wmc training', 'inspiro',
+  'pure care', 'connaught', 'capita', 'completely care', 'marylebone services',
+  'charles hunter', 'pulse', 'sanctuary personnel', 'meridian', 'brook street',
+  // public bodies / schools - not agency clients for a private board
+  'council', 'borough of', 'academy trust', 'multi academy', 'nhs ', ' nhs',
+  'university of', 'city of'
+];
+
+function isAgency(company = '') {
+  const c = ` ${String(company).toLowerCase().trim()} `;
+  return AGENCY_TERMS.some((t) => c.includes(t));
+}
 
 export function isLive() {
   return Boolean(APP_ID && APP_KEY);
@@ -34,7 +59,11 @@ export async function refreshJobs({ log = console.log } = {}) {
     return { mode: 'sample', added: 0, total: jobs.length };
   }
 
-  const seen = new Set(jobs.map((j) => j.id));
+  // rebuild the board fresh each refresh so stale adverts drop off,
+  // but carry over any call notes made on the internal leads board
+  const prior = new Map(jobs.map((j) => [j.id, j]));
+  const fresh = [];
+  const seen = new Set();
   let added = 0;
 
   for (const [sectorKey, cfg] of Object.entries(SECTORS)) {
@@ -59,24 +88,27 @@ export async function refreshJobs({ log = console.log } = {}) {
           if (seen.has(id)) continue;
           seen.add(id);
 
+          const company = r.company?.display_name || 'Unknown employer';
           const blob = `${r.title} ${r.description || ''} ${r.category?.label || ''}`;
           const detected = detectSector(blob);
+          const kept = prior.get(id) || {};
 
-          jobs.push({
+          fresh.push({
             id,
             source: 'Adzuna',
             title: stripTags(r.title) || 'Untitled role',
-            company: r.company?.display_name || 'Unknown employer',
+            company,
             location: r.location?.display_name || '',
             salary: formatSalary(r),
             url: r.redirect_url || '',
             posted: r.created || new Date().toISOString(),
-            found: new Date().toISOString(),
+            found: kept.found || new Date().toISOString(),
             sector: detected === 'other' ? sectorKey : detected,
-            status: 'New',
-            contact: '',
-            phone: '',
-            notes: ''
+            isAgency: isAgency(company),
+            status: kept.status || 'New',
+            contact: kept.contact || '',
+            phone: kept.phone || '',
+            notes: kept.notes || ''
           });
           added++;
         }
@@ -86,8 +118,9 @@ export async function refreshJobs({ log = console.log } = {}) {
     }
   }
 
-  jobs.sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')));
-  write('jobs.json', jobs);
-  log(`[jobs] Live refresh done - ${added} new, ${jobs.length} total.`);
-  return { mode: 'live', added, total: jobs.length };
+  fresh.sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')));
+  write('jobs.json', fresh);
+  const shown = fresh.filter((j) => !j.isAgency).length;
+  log(`[jobs] Live refresh done - ${fresh.length} adverts (${shown} on the public board, ${fresh.length - shown} agency).`);
+  return { mode: 'live', added, total: fresh.length };
 }

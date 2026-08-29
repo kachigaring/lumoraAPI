@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 //  - password set                -> login required (local or hosted)
 //  - no password, running local  -> open, with a console warning (easy first run)
 //  - no password, running hosted -> admin pages refuse to load, so nothing leaks
-const PUBLIC_PATHS = new Set(['/apply.html', '/styles.css', '/favicon.ico']);
+const PUBLIC_PATHS = new Set(['/apply.html', '/styles.css', '/favicon.ico', '/jobs.json']);
 
 function isPublicRequest(req) {
   if (req.method === 'POST' && req.path === '/api/apply') return true;
@@ -77,6 +77,26 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, ALLOWED.has(extname(file.originalname).toLowerCase()))
+});
+
+// ---------- Public jobs feed (for the marketing site) ----------
+// GET /jobs.json  -> live nursery/biomed roles, agency posts removed.
+// CORS-open so the Odoo site (or anywhere) can fetch it from the browser.
+app.get('/jobs.json', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'public, max-age=300');
+  const jobs = read('jobs.json')
+    .filter((j) => !j.isAgency)
+    .map((j) => ({
+      title: j.title,
+      employer: j.company,
+      location: j.location,
+      salary: j.salary,
+      sector: j.sector,
+      posted: j.posted,
+      url: j.url
+    }));
+  res.json({ updated: new Date().toISOString(), count: jobs.length, jobs });
 });
 
 // ---------- API ----------
