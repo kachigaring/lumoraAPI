@@ -36,7 +36,8 @@ app.use(express.urlencoded({ extended: true }));
 const PUBLIC_PATHS = new Set(['/apply.html', '/styles.css', '/favicon.ico', '/jobs.json']);
 
 function isPublicRequest(req) {
-  if (req.method === 'POST' && req.path === '/api/apply') return true;
+  if (req.method === 'POST' && (req.path === '/api/apply' || req.path === '/api/enquiry')) return true;
+  if (req.method === 'OPTIONS' && (req.path === '/api/apply' || req.path === '/api/enquiry')) return true;
   if ((req.method === 'GET' || req.method === 'HEAD') && PUBLIC_PATHS.has(req.path)) return true;
   return false;
 }
@@ -139,7 +140,19 @@ app.post('/api/refresh', async (req, res) => {
 
 app.get('/api/candidates', (req, res) => res.json(read('candidates.json')));
 
-app.post('/api/apply', upload.single('cv'), (req, res) => {
+// CORS-open for the two public-facing submission forms, so the Odoo site
+// (a different origin) can post to them directly and read the response.
+function openCors(req, res, next) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+}
+app.options('/api/apply', openCors);
+app.options('/api/enquiry', openCors);
+
+app.post('/api/apply', openCors, upload.single('cv'), (req, res) => {
   const { name, email, phone, sector, message } = req.body;
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required.' });
@@ -157,6 +170,35 @@ app.post('/api/apply', upload.single('cv'), (req, res) => {
     received: new Date().toISOString()
   });
   write('candidates.json', candidates);
+  res.json({ ok: true });
+});
+
+// ---------- Client enquiries ("Help Me Hire" form) ----------
+app.get('/api/enquiries', (req, res) => res.json(read('enquiries.json')));
+
+app.post('/api/enquiry', openCors, (req, res) => {
+  const {
+    name, company, email, phone, sector,
+    hiringType, roles, hiringVolume, message
+  } = req.body;
+  if (!name || !email || !company) {
+    return res.status(400).json({ error: 'Name, company and email are required.' });
+  }
+  const enquiries = read('enquiries.json');
+  enquiries.unshift({
+    id: randomUUID(),
+    name: String(name),
+    company: String(company),
+    email: String(email),
+    phone: phone ? String(phone) : '',
+    sector: sector ? String(sector) : '',
+    hiringType: hiringType ? String(hiringType) : '',
+    roles: roles ? String(roles) : '',
+    hiringVolume: hiringVolume ? String(hiringVolume) : '',
+    message: message ? String(message) : '',
+    received: new Date().toISOString()
+  });
+  write('enquiries.json', enquiries);
   res.json({ ok: true });
 });
 

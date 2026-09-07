@@ -5,9 +5,10 @@ node_modules/
 .env
 .env.local
 
-# Live data — keep candidate CVs and lead notes OFF the public repo
+# Live data — keep candidate CVs, lead notes and enquiries OFF the public repo
 data/jobs.json
 data/candidates.json
+data/enquiries.json
 data/uploads/
 
 # Logs / build / editor / OS
